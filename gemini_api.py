@@ -57,22 +57,6 @@ PROMPT:
 """)
 
 
-#chunks:list = []
-#shouldContinue = True
-#while shouldContinue:
-#
-#    usrInput = input("paste chunk\n")
-#
-#    logging.info(f"prompted for chunk \nusrInput :>> {usrInput}")
-#
-#    if (usrInput.strip() == "done"):
-#        shouldContinue = False
-#        break
-#
-#    chunks.append(usrInput)
-#
-#logging.info(f"chunks :>> {chunks}")
-
 async def main() -> None:
     print("prompting model")
         
@@ -110,7 +94,7 @@ async def promptModel(input:list[dict[str,str]], model:str, count:int) -> None:
     logging.info(f"Processing Chunk {count}...")
     startTime: float = time.perf_counter()
     
-    interaction = await CLIENT.aio.interactions.create(
+    reponse = interaction = await CLIENT.aio.interactions.create(
         model = model,
         input = input
     )
