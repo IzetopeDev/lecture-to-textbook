@@ -62,6 +62,46 @@ PROMPT:
 """)
 
 
+def writeToFile(text:str, qualifier: None | Any = None, filetype = '.txt', overwrite = False) -> None:
+    startTime: float = time.perf_counter()
+    
+    finalFilePath =  f"./outputs/output{f"-{str(qualifier)}" if qualifier != None else ""}{filetype}"
+
+
+    logging.info(f"writing file: {finalFilePath}")
+
+    with open(
+        finalFilePath,
+        "w" if overwrite else "a", 
+        encoding="utf-8"
+    ) as file:
+        file.write(text)
+
+    logging.info(f"Done in {time.perf_counter() - startTime}: {finalFilePath}s")
+    
+
+async def promptModel(input:list[dict[str,str]] | str, model:str, count:int) -> dict[str,Any]:
+    logging.info(f"Processing Chunk {count}...")
+    startTime: float = time.perf_counter()
+    
+    interaction: AsyncStream[google.genai._gaos.interactions.InteractionSSEEvent] | Interaction = await CLIENT.aio.interactions.create(
+        model = model,
+        input = input
+    )
+    timeElapsed: float = round(time.perf_counter() - startTime, 2)
+    
+    logging.info(f"Returned Chunk {count} in {timeElapsed}s")
+    return {
+        "interaction" : interaction,
+        "timeElapsed" : timeElapsed,
+        "index" : count,
+        "counts" : {
+            "characters" : len(interaction.output_text),
+            "words" : len(interaction.output_text.split()),
+        },
+    }
+
+
 async def main() -> None:
     print("prompting model")
         
@@ -118,46 +158,6 @@ async def main() -> None:
             print(f"Chunk {count} failed to write. Check app.log.")
 
 
-
-def writeToFile(text:str, qualifier: None | Any = None, filetype = '.txt', overwrite = False) -> None:
-    startTime: float = time.perf_counter()
-    
-    finalFilePath =  f"./outputs/output{f"-{str(qualifier)}" if qualifier != None else ""}{filetype}"
-
-
-    logging.info(f"writing file: {finalFilePath}")
-
-    with open(
-        finalFilePath,
-        "w" if overwrite else "a", 
-        encoding="utf-8"
-    ) as file:
-        file.write(text)
-
-    logging.info(f"Done in {time.perf_counter() - startTime}: {finalFilePath}s")
-    
-
-
-async def promptModel(input:list[dict[str,str]] | str, model:str, count:int) -> dict[str,Any]:
-    logging.info(f"Processing Chunk {count}...")
-    startTime: float = time.perf_counter()
-    
-    interaction: AsyncStream[google.genai._gaos.interactions.InteractionSSEEvent] | Interaction = await CLIENT.aio.interactions.create(
-        model = model,
-        input = input
-    )
-    timeElapsed: float = round(time.perf_counter() - startTime, 2)
-    
-    logging.info(f"Returned Chunk {count} in {timeElapsed}s")
-    return {
-        "interaction" : interaction,
-        "timeElapsed" : timeElapsed,
-        "index" : count,
-        "counts" : {
-            "characters" : len(interaction.output_text),
-            "words" : len(interaction.output_text.split()),
-        },
-    }
 
 
 asyncio.run(main())
