@@ -3,4 +3,6 @@
 
 outputs/*
 logs/*
-chunks/
+*chunks
+
+playground.py
