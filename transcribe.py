@@ -10,7 +10,6 @@ RECORDINGS = os.listdir(PrjPaths.audio_files)
 
 logging.basicConfig(
     filename = os.path.join(PrjPaths.logs, "app.log"),
-    filename = os.path.join(PrjPaths.logs, "app.log"),
     level = logging.INFO,
     format = "%(asctime)s | %(levelname)s | %(message)s",
     encoding = "utf-8"
