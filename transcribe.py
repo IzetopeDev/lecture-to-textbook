@@ -9,6 +9,7 @@ load_dotenv()
 PATH_LOGS = os.getenv("PATH_LOGS")
 PATH_RECORDINGS = os.getenv("PATH_RECORDINGS")
 RECORDINGS = os.listdir(PATH_RECORDINGS)
+MODEL_TYPE = os.getenv("TRANSCRIPTION_MODEL_TYPE")
 
 logging.basicConfig(
     filename = os.path.join(PATH_LOGS, "app.log"),
@@ -20,22 +21,22 @@ logging.basicConfig(
 logging.info(f"To transcribe recordings :>> {RECORDINGS}")
 
 def load_model() -> whisper.model.Whisper:
-    start_time = time.perf_counter()
+    startTime = time.perf_counter()
     logging.info("Loading model...")
     
-    model = whisper.load_model("small.en", device="cuda")
+    model = whisper.load_model(MODEL_TYPE, device="cuda")
     
-    logging.info(f"Model loaded in {time.perf_counter() - start_time:.2f}s")
+    logging.info(f"Model loaded in {time.perf_counter() - startTime:.2f}s")
     return model
 
 def transcribe(model: whisper.model.Whisper, recording: str) -> dict:
-    start_time = time.perf_counter()
+    startTime = time.perf_counter()
     logging.info(f"Transcribing {recording}...")
     
     try:
         result = model.transcribe(os.path.join(PATH_RECORDINGS, recording))
         
-        logging.info(f"Transcription done in {time.perf_counter() - start_time:.2f}s")
+        logging.info(f"Transcription done in {time.perf_counter() - startTime:.2f}s")
         
         return {
             "recording": recording,
@@ -52,16 +53,16 @@ def transcribe(model: whisper.model.Whisper, recording: str) -> dict:
         }
 
 def write_to_file(text: str, qualifier: str, filetype = '.txt', overwrite=True) -> None:
-    start_time = time.perf_counter()
+    startTime = time.perf_counter()
     
-    final_file_path = f"./input-output/transcripts/transcript-{qualifier}{filetype}"
+    finalFilePath = f"./input-output/transcripts/transcript-{qualifier}{filetype}"
     
-    logging.info(f"Writing file: {final_file_path}")
+    logging.info(f"Writing file: {finalFilePath}")
     
-    with open(final_file_path, "w" if overwrite else "a", encoding="utf-8") as file:
+    with open(finalFilePath, "w" if overwrite else "a", encoding="utf-8") as file:
         file.write(text)
     
-    logging.info(f"Done in {time.perf_counter() - start_time:.2f}s: {final_file_path}")
+    logging.info(f"Done in {time.perf_counter() - startTime:.2f}s: {finalFilePath}")
 
 def main() -> None:
     # Load model once
