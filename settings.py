@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class PrjPaths:
     chunks: Path = Path("./input-output/chunks")
     transcripts_raw: Path = Path("./input-output/transcripts")
-    transcripts_cleaned: Path = Path("./input-output/ouputs")
+    transcripts_cleaned: Path = Path("./input-output/outputs")
     audio_files: Path = Path("./input-output/audio files")
     logs: Path = Path('./logs')
 
