@@ -26,9 +26,9 @@ logging.basicConfig(
 load_dotenv()
 
 API_KEY: str | None = os.getenv("API_KEY")
-MODEL_NAME = "gemini-3.1-flash-lite"
-
 CLIENT: genai.Client | None = None
+
+
 
 def setup_client() -> genai.Client:
     if not API_KEY:
@@ -43,23 +43,23 @@ def get_chunk_files(pathChunks: Path) -> list[Path]:
     if not pathChunks.is_dir():
         raise NotADirectoryError(f"Chunks path is not a directory: {pathChunks}")
 
-    ChunkFiles = sorted(
+    chunkFiles = sorted(
         filePath for filePath in pathChunks.iterdir() if filePath.is_file()
     )
 
-    if not ChunkFiles:
+    if not chunkFiles:
         raise FileNotFoundError(f"No chunk files found in directory: {pathChunks}")
 
-    return ChunkFiles
+    return chunkFiles
 
 def read_chunk_file(filePath: Path) -> str:
     try:
         return filePath.read_text(encoding="utf-8")
     except FileNotFoundError:
-        logging.exception("Chunk file not found: %s", filePath)
+        logging.exception(f"Chunk file not found: {filePath}")
         raise
     except OSError:
-        logging.exception("Failed to read chunk file: %s", filePath)
+        logging.exception(f"Failed to read chunk file: {filePath}")
         raise
 
 async def prompt_model(
@@ -71,10 +71,10 @@ async def prompt_model(
         raise RuntimeError("Client has not been initialized.")
 
     logging.info("Processing chunk %d...", count)
-    StartTime: float = time.perf_counter()
+    startTime: float = time.perf_counter()
 
     try:
-        InteractionResult: (
+        interactionResult: (
             AsyncStream[google.genai._gaos.interactions.InteractionSSEEvent]
             | Interaction
         ) = await CLIENT.aio.interactions.create(
@@ -85,21 +85,22 @@ async def prompt_model(
         logging.exception("Model request failed for chunk %d", count)
         raise
 
-    TimeElapsed: float = round(time.perf_counter() - StartTime, 2)
-    OutputText: str = getattr(InteractionResult, "output_text", "") or ""
+    timeElapsed: float = round(time.perf_counter() - startTime, 2)
+    outputText: str = getattr(interactionResult, "output_text", "") or ""
 
-    if not OutputText:
+    if not outputText:
         logging.warning("Chunk %d returned empty output_text.", count)
 
-    logging.info("Returned chunk %d in %ss", count, TimeElapsed)
+    logging.info("Returned chunk %d in %ss", count, timeElapsed)
 
     return {
-        "interaction": InteractionResult,
-        "timeElapsed": TimeElapsed,
+        "interaction": interactionResult,
+        "output_text": outputText,
+        "time_elapsed": timeElapsed,
         "index": count,
         "counts": {
-            "characters": len(OutputText),
-            "words": len(OutputText.split()),
+            "characters": len(outputText),
+            "words": len(outputText.split()),
         },
     }
 
@@ -108,14 +109,12 @@ async def main() -> None:
 
     try:
         CLIENT = setup_client()
-        ChunkFiles = get_chunk_files(PrjPaths.chunks)
+        chunkFiles = get_chunk_files(PrjPaths.chunks)
 
         logging.info(
-            "\nCLIENT: %s\nCHUNKS(%d): %s\nPROMPT:\n===start===\n%s\n===end===\n",
-            CLIENT,
-            len(ChunkFiles),
-            [str(filePath) for filePath in ChunkFiles],
-            Prompts.clean_transcript,
+            f"\nCLIENT: {CLIENT}\n"
+            f"CHUNKS({len(chunkFiles)}): {[(str(filePath) + "\n") for filePath in chunkFiles]}\n"
+            f"PROMPT:\n===start===\n{Prompts.clean_transcript}\n===end===\n"
         )
     except Exception:
         logging.exception("Startup validation failed.")
@@ -124,66 +123,61 @@ async def main() -> None:
 
     print("prompting model")
 
-    Tasks = []
-    for Count, ChunkPath in enumerate(ChunkFiles):
+    tasks = []
+    for count, chunkPath in enumerate(chunkFiles):
         try:
-            ChunkText = read_chunk_file(ChunkPath)
-            Tasks.append(
+            chunkText = read_chunk_file(chunkPath)
+            tasks.append(
                 prompt_model(
-                    Prompts.clean_transcript + ChunkText,
-                    MODEL_NAME,
-                    Count,
+                    Prompts.clean_transcript + chunkText,
+                    PrjModels.clean_transcript,
+                    count,
                 )
             )
         except Exception:
-            logging.exception("Skipping chunk %d due to read failure: %s", Count, ChunkPath)
-            print(f"Chunk {Count} skipped. Check app.log.")
+            logging.exception(f"Skipping chunk {count} due to read failure: {chunkPath}")
+            print(f"Chunk {count} skipped. Check app.log.")
 
-    if not Tasks:
+    if not tasks:
         logging.warning("No valid chunk tasks to process.")
         print("No valid chunk files to process.")
         return
 
-    Results = await asyncio.gather(*Tasks, return_exceptions=True)
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    FilesToWrite = []
-    for Count, Result in enumerate(Results):
-        if isinstance(Result, Exception):
+    filesToWrite = []
+    for result in results:
+        if isinstance(result, Exception):
             logging.error(
-                "Chunk %d failed: %s",
-                Count,
-                Result,
-                exc_info=(type(Result), Result, Result.__traceback__),
+                f"Chunk {result["index"]} failed: {result}",
+                exc_info=(type(result), result, result.__traceback__),
             )
-            print(f"Chunk {Count} failed. Check app.log.")
+            print(f"Chunk {result["index"]} failed. Check app.log.")
             continue
 
-        OutputText = getattr(Result["interaction"], "output_text", "") or ""
-        FilesToWrite.append(
+        filesToWrite.append(
             asyncio.to_thread(
                 write_to_file,
-                OutputText,
+                result["output_text"],
                 PrjPaths.transcripts_cleaned,
-                Result["index"],
+                result["index"],
             )
         )
 
-    if not FilesToWrite:
+    if not filesToWrite:
         logging.warning("No successful model outputs to write.")
         print("No outputs to write.")
         return
 
-    WriteResults = await asyncio.gather(*FilesToWrite, return_exceptions=True)
+    writeResults = await asyncio.gather(*filesToWrite, return_exceptions=True)
 
-    for Count, Result in enumerate(WriteResults):
-        if isinstance(Result, Exception):
+    for count, result in enumerate(writeResults):
+        if isinstance(result, Exception):
             logging.error(
-                "Write task %d failed: %s",
-                Count,
-                Result,
-                exc_info=(type(Result), Result, Result.__traceback__),
+                f"Write task {count} failed: {result}",
+                exc_info=(type(result), result, result.__traceback__),
             )
-            print(f"Write task {Count} failed. Check app.log.")
+            print(f"Write task {count} failed. Check app.log.")
 
 if __name__ == "__main__":
     try:

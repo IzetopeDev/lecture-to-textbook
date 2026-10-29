@@ -11,6 +11,7 @@ class PrjPaths:
 
 class PrjModels:
     transcription: str = "medium.en"
+    clean_transcript: str = "gemini-3.1-flash-lite"
 
 @dataclass(frozen=True)
 class Prompts:
