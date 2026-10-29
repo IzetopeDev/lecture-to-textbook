@@ -130,6 +130,7 @@ async def main() -> None:
                 )
             )
             print(f"Chunk {count} receive. Check app.log.")
+            continue
 
         filesToWrite.append(
             asyncio.to_thread(
