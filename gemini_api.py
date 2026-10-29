@@ -106,7 +106,7 @@ async def main() -> None:
         
     tasks = [
         promptModel(
-            PROMPT + open(PATH_CHUNKS + chunk).read(), 
+            PROMPT + open(os.path.join(PATH_CHUNKS, chunk)).read(), 
             MODEL_NAME, 
             count
         )
