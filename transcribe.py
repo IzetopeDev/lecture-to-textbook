@@ -1,9 +1,7 @@
-import whisper.model
+import whisper
 import os
-import asyncio
 import logging
 import time
-import whisper
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,70 +17,66 @@ logging.basicConfig(
     encoding = "utf-8"
 )
 
-
 logging.info(f"To transcribe recordings :>> {RECORDINGS}")
 
-async def loadModel() -> whisper.model.Whisper:
-    startTime = time.perf_counter()
-    logging.info(f"Loading model...")
-
-    model: whisper.model.Whisper = await asyncio.to_thread(
-        lambda: whisper.load_model("small.en", device="cuda")
-    )
-
-    logging.info(f"Model loaded in {time.perf_counter() - startTime}s")
-
+def load_model() -> whisper.model.Whisper:
+    start_time = time.perf_counter()
+    logging.info("Loading model...")
+    
+    model = whisper.load_model("small.en", device="cuda")
+    
+    logging.info(f"Model loaded in {time.perf_counter() - start_time:.2f}s")
     return model
 
-
-def transcribe(model:whisper.model.Whisper, recording:str) -> dict[str, str]:
-    startTime = time.perf_counter()
+def transcribe(model: whisper.model.Whisper, recording: str) -> dict:
+    start_time = time.perf_counter()
     logging.info(f"Transcribing {recording}...")
-
-    result = model.transcribe(os.path.join(PATH_RECORDINGS, recording))
-
-    logging.info(f"Transcription done in {time.perf_counter() - startTime}")
-
-    return {
-        "recording" : recording,
-        "transcript" : result["text"],
-    }
-
-def writeToFile(text:str, qualifier: str, filetype = '.txt', overwrite = True) -> None:
-    startTime: float = time.perf_counter()
     
-    finalFilePath =  f"./input-output/transcripts/transcript{f"-{str(qualifier)}" if qualifier != None else ""}{filetype}"
+    try:
+        result = model.transcribe(os.path.join(PATH_RECORDINGS, recording))
+        
+        logging.info(f"Transcription done in {time.perf_counter() - start_time:.2f}s")
+        
+        return {
+            "recording": recording,
+            "transcript": result["text"],
+            "success": True
+        }
+    
+    except Exception as e:
+        logging.error(f"Failed to transcribe {recording}: {e}", exc_info=True)
+        return {
+            "recording": recording,
+            "success": False,
+            "error": str(e)
+        }
 
-
-    logging.info(f"writing file: {finalFilePath}")
-
-    with open(
-        finalFilePath,
-        "w" if overwrite else "a", 
-        encoding="utf-8"
-    ) as file:
+def write_to_file(text: str, qualifier: str, filetype = '.txt', overwrite=True) -> None:
+    start_time = time.perf_counter()
+    
+    final_file_path = f"./input-output/transcripts/transcript-{qualifier}{filetype}"
+    
+    logging.info(f"Writing file: {final_file_path}")
+    
+    with open(final_file_path, "w" if overwrite else "a", encoding="utf-8") as file:
         file.write(text)
-
-    logging.info(f"Done in {time.perf_counter() - startTime}s: {finalFilePath}")
-
-async def main() -> list[str]:
-
-    model: whisper.model.Whisper = await loadModel()
-
-    tasks = [ 
-        asyncio.to_thread(transcribe, model, recording) 
-        for recording in RECORDINGS 
-    ]        
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for result in results:
-        if isinstance(result, Exception):
-            logging.error(f"Task failed: {result}", exc_info=(type(result), result, result.__traceback__))
-            continue
-
-
-        writeToFile(result["transcript"], result["recording"].split(".")[0])
     
+    logging.info(f"Done in {time.perf_counter() - start_time:.2f}s: {final_file_path}")
 
-asyncio.run(main())
+def main() -> None:
+    # Load model once
+    model = load_model()
     
+    # Process each recording sequentially
+    for recording in RECORDINGS:
+        result = transcribe(model, recording)
+        
+        if result["success"]:
+            write_to_file(result["transcript"], result["recording"].split(".")[0])
+        else:
+            logging.error(f"Skipped writing transcript for {recording} due to error")
+    
+    logging.info("All transcriptions complete")
+
+if __name__ == "__main__":
+    main()
