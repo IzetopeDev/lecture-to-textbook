@@ -1,8 +1,6 @@
 .env
 .venv
 
-outputs/*
-logs/*
-*chunks
+input-output/
 
 playground.py
