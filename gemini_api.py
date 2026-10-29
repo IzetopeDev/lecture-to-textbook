@@ -60,24 +60,6 @@ PROMPT:
 {PROMPT}
 ===end===
 """)
-
-
-def writeToFile(text:str, qualifier: None | Any = None, filetype = '.txt', overwrite = False) -> None:
-    startTime: float = time.perf_counter()
-    
-    finalFilePath =  f"./outputs/output{f"-{str(qualifier)}" if qualifier != None else ""}{filetype}"
-
-
-    logging.info(f"writing file: {finalFilePath}")
-
-    with open(
-        finalFilePath,
-        "w" if overwrite else "a", 
-        encoding="utf-8"
-    ) as file:
-        file.write(text)
-
-    logging.info(f"Done in {time.perf_counter() - startTime}: {finalFilePath}s")
     
 
 async def promptModel(input:list[dict[str,str]] | str, model:str, count:int) -> dict[str,Any]:
@@ -101,6 +83,23 @@ async def promptModel(input:list[dict[str,str]] | str, model:str, count:int) -> 
         },
     }
 
+
+def writeToFile(text:str, qualifier: None | Any = None, filetype = '.txt', overwrite = False) -> None:
+    startTime: float = time.perf_counter()
+    
+    finalFilePath =  f"./outputs/output{f"-{str(qualifier)}" if qualifier != None else ""}{filetype}"
+
+
+    logging.info(f"writing file: {finalFilePath}")
+
+    with open(
+        finalFilePath,
+        "w" if overwrite else "a", 
+        encoding="utf-8"
+    ) as file:
+        file.write(text)
+
+    logging.info(f"Done in {time.perf_counter() - startTime}: {finalFilePath}s")
 
 async def main() -> None:
     print("prompting model")
