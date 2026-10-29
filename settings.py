@@ -7,7 +7,10 @@ class PrjPaths:
     transcripts_raw: Path = Path("./input-output/transcripts")
     transcripts_cleaned: Path = Path("./input-output/ouputs")
     audio_files: Path = Path("./input-output/audio files")
+    logs: Path = Path('./logs')
 
+class PrjModels:
+    transcription: str = "medium.en"
 
 @dataclass(frozen=True)
 class Prompts:

@@ -9,13 +9,10 @@ from settings import *
 
 load_dotenv()
 
-PATH_LOGS = os.getenv("PATH_LOGS")
-PATH_RECORDINGS = os.getenv("PATH_RECORDINGS")
-RECORDINGS = os.listdir(PATH_RECORDINGS)
-MODEL_TYPE = os.getenv("TRANSCRIPTION_MODEL_TYPE")
+RECORDINGS = os.listdir(PrjPaths.audio_files)
 
 logging.basicConfig(
-    filename = os.path.join(PATH_LOGS, "app.log"),
+    filename = os.path.join(PrjPaths.logs, "app.log"),
     level = logging.INFO,
     format = "%(asctime)s | %(levelname)s | %(message)s",
     encoding = "utf-8"
@@ -27,7 +24,7 @@ def load_model() -> whisper.model.Whisper:
     startTime = time.perf_counter()
     logging.info("Loading model...")
     
-    model = whisper.load_model(MODEL_TYPE, device="cuda")
+    model = whisper.load_model(PrjModels.transcription, device="cuda")
     
     logging.info(f"Model loaded in {time.perf_counter() - startTime:.2f}s")
     return model
@@ -37,7 +34,7 @@ def transcribe(model: whisper.model.Whisper, recording: str) -> dict:
     logging.info(f"Transcribing {recording}...")
     
     try:
-        result = model.transcribe(os.path.join(PATH_RECORDINGS, recording))
+        result = model.transcribe(os.path.join(PrjPaths.audio_files, recording))
         
         logging.info(f"Transcription done in {time.perf_counter() - startTime:.2f}s")
         
