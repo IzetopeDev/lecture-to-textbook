@@ -4,6 +4,9 @@ import logging
 import time
 from dotenv import load_dotenv
 
+from helpers import write_to_file
+from settings import *
+
 load_dotenv()
 
 PATH_LOGS = os.getenv("PATH_LOGS")
@@ -52,18 +55,6 @@ def transcribe(model: whisper.model.Whisper, recording: str) -> dict:
             "error": str(e)
         }
 
-def write_to_file(text: str, qualifier: str, filetype = '.txt', overwrite=True) -> None:
-    startTime = time.perf_counter()
-    
-    finalFilePath = f"./input-output/transcripts/transcript-{qualifier}{filetype}"
-    
-    logging.info(f"Writing file: {finalFilePath}")
-    
-    with open(finalFilePath, "w" if overwrite else "a", encoding="utf-8") as file:
-        file.write(text)
-    
-    logging.info(f"Done in {time.perf_counter() - startTime:.2f}s: {finalFilePath}")
-
 def main() -> None:
     # Load model once
     model = load_model()
@@ -73,7 +64,7 @@ def main() -> None:
         result = transcribe(model, recording)
         
         if result["success"]:
-            write_to_file(result["transcript"], result["recording"].split(".")[0])
+            write_to_file(result["transcript"], PrjPaths.transcripts_raw, result["recording"].split(".")[0])
         else:
             logging.error(f"Skipped writing transcript for {recording} due to error")
     

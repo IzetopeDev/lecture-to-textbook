@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 import time
-from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -12,6 +11,10 @@ from google import genai
 from google.genai._gaos.types.interactions import Interaction
 from google.genai._gaos.utils.eventstreaming import AsyncStream
 import google.genai._gaos
+
+from settings import *
+from helpers import write_to_file
+
 
 logging.basicConfig(
     filename="./logs/app.log",
@@ -23,36 +26,7 @@ logging.basicConfig(
 load_dotenv()
 
 API_KEY: str | None = os.getenv("API_KEY")
-PATH_CHUNKS = Path("./chunks")
-PATH_OUTPUTS = Path("./outputs")
 MODEL_NAME = "gemini-3.1-flash-lite"
-
-PROMPT = """
-You are editing ONE CHUNK of the transcript.
-
-## Goal
-
-Make the transcript more readable in english while preserving ALL meaningful content.
-
-## Rules
-- Summary is forbidden
-- Use only vocabulary and information found in the source.
-- Every substantive word in the edited transcript must come from the source transcript.
-- Words may be removed, reordered, or grammatically adjusted only when supported by words already in the source.
-- Remove filler only when it does not remove meaning.
-- Do not introduce synonyms, replacement vocabulary, new concepts, facts, explanations, examples, opinions, or conclusions.
-- Preserve the original flow and order.
-- Preserve every meaningful idea, qualification, example, explanation, distinction, and detail. Omission is forbidden
-- Preserve repetitions when they carry meaning.
-- Separate distinct sub-ideas into readable paragraphs.
-- Do not cite or mention the source file.
-
-## Formatting
-- in plaintext
-
-Source Chunk:
-
-"""
 
 CLIENT: genai.Client | None = None
 
@@ -129,53 +103,19 @@ async def prompt_model(
         },
     }
 
-def write_to_file(
-    text: str,
-    qualifier: Any | None = None,
-    filetype: str = ".txt",
-    overwrite: bool = False,
-) -> Path:
-    StartTime: float = time.perf_counter()
-
-    try:
-        PATH_OUTPUTS.mkdir(parents=True, exist_ok=True)
-
-        Suffix = f"-{qualifier}" if qualifier is not None else ""
-        FinalFilePath = PATH_OUTPUTS / f"output{Suffix}{filetype}"
-
-        logging.info("Writing file: %s", FinalFilePath)
-
-        with open(
-            FinalFilePath,
-            "w" if overwrite else "a",
-            encoding="utf-8",
-        ) as file:
-            file.write(text)
-
-        logging.info(
-            "Done in %.2fs: %s",
-            time.perf_counter() - StartTime,
-            FinalFilePath,
-        )
-        return FinalFilePath
-
-    except OSError:
-        logging.exception("Failed writing output file for qualifier=%s", qualifier)
-        raise
-
 async def main() -> None:
     global CLIENT
 
     try:
         CLIENT = setup_client()
-        ChunkFiles = get_chunk_files(PATH_CHUNKS)
+        ChunkFiles = get_chunk_files(PrjPaths.chunks)
 
         logging.info(
             "\nCLIENT: %s\nCHUNKS(%d): %s\nPROMPT:\n===start===\n%s\n===end===\n",
             CLIENT,
             len(ChunkFiles),
             [str(filePath) for filePath in ChunkFiles],
-            PROMPT,
+            Prompts.clean_transcript,
         )
     except Exception:
         logging.exception("Startup validation failed.")
@@ -190,7 +130,7 @@ async def main() -> None:
             ChunkText = read_chunk_file(ChunkPath)
             Tasks.append(
                 prompt_model(
-                    PROMPT + ChunkText,
+                    Prompts.clean_transcript + ChunkText,
                     MODEL_NAME,
                     Count,
                 )
@@ -223,6 +163,7 @@ async def main() -> None:
             asyncio.to_thread(
                 write_to_file,
                 OutputText,
+                PrjPaths.transcripts_cleaned,
                 Result["index"],
             )
         )
