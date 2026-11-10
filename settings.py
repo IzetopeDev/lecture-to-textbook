@@ -9,6 +9,8 @@ class PrjPaths:
     transcripts_cleaned: Path = Path("./input-output/outputs")
     audio_files: Path = Path("./input-output/audio files")
     logs: Path = Path('./logs')
+    tmp: Path = Path('./tmp')
+    tmp_audio_chunks = Path('./tmp/audio_chunks')
 
 class PrjModels:
     transcription: str = "medium.en"

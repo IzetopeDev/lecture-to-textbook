@@ -1,8 +1,71 @@
-from pathlib import Path
 import logging
+import math
 import time
+from pathlib import Path
 from typing import Any
 
+import ffmpeg
+
+from settings import PrjPaths
+
+logging.basicConfig(
+    filename="./logs/app.log",
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    encoding="utf-8",
+)
+
+def split_audio(
+    pathAudioFile: Path, 
+    chunkLength: int = 20
+) -> list[Path] | Exception:
+    """
+    Args:
+        pathAudioFile (Path): path to audio file
+        chunkLength (int): chunkLength in minutes. 
+    """
+    # start logging and create tmp path
+    logging.info(f"splitting audio: {pathAudioFile}")
+    PrjPaths.tmp_audio_chunks.mkdir(parents=True, exist_ok=True)
+
+    if not pathAudioFile.exists():
+        raise FileNotFoundError(f"Audio file not found: {pathAudioFile}")
+    
+    # get duration and ext of audio file
+    try:
+        probe = ffmpeg.probe(pathAudioFile)
+    except ffmpeg.Error as e: 
+        print(f"Exception raised: {e}")
+        raise
+    except Exception as e:
+        print(f"Uncaught Exception raised: {e}")
+        raise
+    
+    duration = float(probe['format']['duration'])
+    ext = str(probe['streams'][0]['codec_name'])
+
+    u = 60
+    
+    try:
+        chunks = []
+        for i, start in enumerate(range(0, math.ceil(duration), int(chunkLength*u))):
+            outputFile = PrjPaths.tmp_audio_chunks / f"chunk{i}.{ext}"
+            (
+                ffmpeg
+                .input(str(pathAudioFile), ss=start, t=chunkLength*u)
+                .output(str(outputFile))
+                .overwrite_output()
+                .run(quiet=True)
+            )
+            
+            chunks.append(outputFile)
+    except Exception as e:
+        logging.error("exception raised: ", e)
+        raise Exception
+
+    return chunks
+    
+    
 
 def write_to_file(
     text: str,
