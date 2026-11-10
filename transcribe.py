@@ -1,7 +1,8 @@
-import whisper
-import os
 import logging
+import os
 import time
+
+import whisper
 
 from helpers import write_to_file
 from settings import *

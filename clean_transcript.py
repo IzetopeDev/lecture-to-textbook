@@ -6,15 +6,14 @@ import os
 import time
 from typing import Any
 
+import google.genai._gaos
 from dotenv import load_dotenv
 from google import genai
 from google.genai._gaos.types.interactions import Interaction
 from google.genai._gaos.utils.eventstreaming import AsyncStream
-import google.genai._gaos
 
-from settings import *
 from helpers import write_to_file
-
+from settings import *
 
 logging.basicConfig(
     filename="./logs/app.log",
