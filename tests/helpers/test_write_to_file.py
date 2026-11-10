@@ -4,7 +4,6 @@ import logging
 from unittest.mock import patch, MagicMock
 import time
 
-# Assuming your function is in a file called file_utils.py
 from helpers import write_to_file
 
 @pytest.fixture
