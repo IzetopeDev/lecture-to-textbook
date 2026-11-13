@@ -9,7 +9,6 @@ load_dotenv()
 @dataclass(frozen=True)
 class PrjEnv:
     GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
-    FIREFLIES_TRANSCRIPTION_API_KEY: str | None = os.getenv("FIREFLIES_API_KEY")
 
 @dataclass(frozen=True)
 class PrjPaths:
