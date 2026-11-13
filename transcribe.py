@@ -1,36 +1,58 @@
-import logging
 import os
 import time
+from pathlib import Path
 
+import torch
 import whisper
 
-from helpers import split_audio, write_to_file
-from settings import *
+from helpers import DLOG, split_audio, write_to_file
+from settings import PrjModels, PrjPaths
 
-
-logging.info(f"To transcribe recordings :>> {RECORDINGS}")
 
 def load_model() -> whisper.model.Whisper:
     startTime = time.perf_counter()
-    logging.info("Loading model...")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    DLOG.info(
+        f"Loading Whisper model '{PrjModels.transcription}' on device '{device}'..."
+    )
 
-    model = whisper.load_model(PrjModels.transcription, device="cuda")
-    model = whisper.load_model(PrjModels.transcription, device="cuda")
+    try:
+        model = whisper.load_model(PrjModels.transcription, device=device)
+    except Exception as e:
+        if device == "cuda":
+            DLOG.warning(
+                f"Failed to load model on CUDA ({e}). Falling back to CPU..."
+            )
+            device = "cpu"
+            model = whisper.load_model(PrjModels.transcription, device=device)
+        else:
+            raise
 
-    logging.info(f"Model loaded in {time.perf_counter() - startTime:.2f}s")
+    elapsed = time.perf_counter() - startTime
+    DLOG.info(f"Model loaded in {elapsed:.2f}s on {device}")
     return model
+
 
 def transcribe(
     model: whisper.model.Whisper,
     pathRecording: Path,
 ) -> dict:
     startTime = time.perf_counter()
-    logging.info(f"Transcribing {pathRecording}...")
+
+    if pathRecording.is_file():
+        audio_path = pathRecording
+    elif (PrjPaths.audio_files / pathRecording).is_file():
+        audio_path = PrjPaths.audio_files / pathRecording
+    else:
+        audio_path = pathRecording
+
+    DLOG.info(f"Transcribing {audio_path}...")
 
     try:
-        result = model.transcribe(str(PrjPaths.audio_files/ pathRecording))
+        result = model.transcribe(str(audio_path))
+        elapsed = time.perf_counter() - startTime
 
-        logging.info(f"Transcription done in {time.perf_counter() - startTime:.2f}s")
+        DLOG.info(f"Transcription done in {elapsed:.2f}s for {audio_path.name}")
 
         return {
             "pathRecording": pathRecording,
@@ -38,50 +60,77 @@ def transcribe(
         }
 
     except Exception as e:
-        logging.error(f"Failed to transcribe {pathRecording}: {e}", exc_info=True)
+        DLOG.error(f"Failed to transcribe {audio_path}: {e}", exc_info=True)
         raise
 
-def main() -> None:
 
-    RECORDINGS: list[Path] = [Path(pathAudioFile) for pathAudioFile in os.listdir(PrjPaths.audio_files)]
-    
-    logging.basicConfig(
-        filename = os.path.join(PrjPaths.logs, "app.log"),
-        level = logging.INFO,
-        format = "%(asctime)s | %(levelname)s | %(message)s",
-        encoding = "utf-8"
+def main() -> None:
+    DLOG.info("=" * 60)
+    DLOG.info("Starting audio transcription workflow")
+
+    if not PrjPaths.audio_files.exists():
+        DLOG.warning(f"Audio files directory does not exist: {PrjPaths.audio_files}")
+        return
+
+    recordings: list[Path] = [
+        PrjPaths.audio_files / pathAudioFile
+        for pathAudioFile in os.listdir(PrjPaths.audio_files)
+        if not pathAudioFile.startswith(".")
+    ]
+
+    if not recordings:
+        DLOG.warning(f"No audio files found in directory: {PrjPaths.audio_files}")
+        return
+
+    DLOG.info(
+        f"Found {len(recordings)} recording(s) to transcribe in {PrjPaths.audio_files}"
     )
-    
+    for r in recordings:
+        DLOG.info(f"  - {r.name}")
+
     # Load model once
     model = load_model()
 
     # Process each recording sequentially
-    for recording in RECORDINGS:
+    for idx, recording in enumerate(recordings, 1):
+        DLOG.info(
+            f"Processing recording [{idx}/{len(recordings)}]: {recording.name}"
+        )
 
         try:
             recChunks = split_audio(recording)
+            DLOG.info(f"[WORKFLOW] {recording.name} split into {len(recChunks)} chunk(s).")
         except FileNotFoundError:
-            logging.warning(f"Skipped splitting {recording} as path could not be found. Transcribing without chunking.")
+            DLOG.warning(
+                f"Skipped splitting {recording.name} as path could not be found. Transcribing without chunking."
+            )
             recChunks = [recording]
 
-        for chunk in recChunks:
+        for chunk_idx, chunk in enumerate(recChunks, 1):
+            DLOG.info(f"[WORKFLOW] Transcribing chunk [{chunk_idx}/{len(recChunks)}]: {chunk.name}")
             try:
                 chunk_result = transcribe(model, chunk)
+                qualifier = recording.name.split(".")[0]
                 write_to_file(
                     chunk_result["transcript"],
                     PrjPaths.transcripts_raw,
-                    qualifier=str(recording).split(".")[0],
+                    qualifier=qualifier,
                     overwrite=False
                 )
             except OSError as e:
-                logging.error(f"Failed to write transcript for {chunk} due to error {e}")
+                DLOG.error(f"Failed to write transcript for {chunk} due to error {e}")
                 raise
 
-            except Exception:
-                logging.error(f"Skipped processing {recording}")
+            except Exception as e:
+                DLOG.error(
+                    f"Skipped processing {recording.name} due to error {e}",
+                    exc_info=True
+                )
                 raise
 
-    logging.info("All transcriptions complete")
+    DLOG.info("All transcriptions completed successfully!")
+    DLOG.info("=" * 60)
+
 
 if __name__ == "__main__":
     main()

@@ -1,10 +1,11 @@
-import pytest
-from pathlib import Path
 import logging
-from unittest.mock import patch, MagicMock
-import time
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from helpers import write_to_file
+
 
 @pytest.fixture
 def temp_dir(tmp_path):
@@ -120,9 +121,8 @@ def test_oserror_logging(tmp_path, caplog):
     bad_path = tmp_path / "file.txt"
     bad_path.write_text("blocking")
     
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(OSError):
-            write_to_file("Test", bad_path / "subdir", qualifier="error_test")
+    with caplog.at_level(logging.ERROR), pytest.raises(OSError):
+        write_to_file("Test", bad_path / "subdir", qualifier="error_test")
     
     assert "Failed writing output file" in caplog.text
     assert "qualifier=error_test" in caplog.text
@@ -132,7 +132,7 @@ def test_timing_measurement(mock_time, temp_dir):
     """Test that timing is measured"""
     mock_time.side_effect = [0.0, 1.5]  # Start and end times
     
-    with patch('logging.info') as mock_log:
+    with patch('helpers.DLOG.info') as mock_log:
         write_to_file("Test", temp_dir)
         
         # Check that the timing was logged
