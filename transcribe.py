@@ -13,18 +13,20 @@ def load_model() -> whisper.model.Whisper:
     startTime = time.perf_counter()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     DLOG.info(
-        f"Loading Whisper model '{PrjModels.transcription}' on device '{device}'..."
+        f"Loading Whisper model '{PrjModels.TRANSCRIPTION}' on device '{device}'..."
     )
+    if device == "cpu":
+        DLOG.warning("Loading on CPU!")
 
     try:
-        model = whisper.load_model(PrjModels.transcription, device=device)
+        model = whisper.load_model(PrjModels.TRANSCRIPTION, device=device)
     except Exception as e:
         if device == "cuda":
             DLOG.warning(
                 f"Failed to load model on CUDA ({e}). Falling back to CPU..."
             )
             device = "cpu"
-            model = whisper.load_model(PrjModels.transcription, device=device)
+            model = whisper.load_model(PrjModels.TRANSCRIPTION, device=device)
         else:
             raise
 
@@ -41,8 +43,8 @@ def transcribe(
 
     if pathRecording.is_file():
         audio_path = pathRecording
-    elif (PrjPaths.audio_files / pathRecording).is_file():
-        audio_path = PrjPaths.audio_files / pathRecording
+    elif (PrjPaths.AUDIO_FILES / pathRecording).is_file():
+        audio_path = PrjPaths.AUDIO_FILES / pathRecording
     else:
         audio_path = pathRecording
 
@@ -68,22 +70,22 @@ def main() -> None:
     DLOG.info("=" * 60)
     DLOG.info("Starting audio transcription workflow")
 
-    if not PrjPaths.audio_files.exists():
-        DLOG.warning(f"Audio files directory does not exist: {PrjPaths.audio_files}")
+    if not PrjPaths.AUDIO_FILES.exists():
+        DLOG.warning(f"Audio files directory does not exist: {PrjPaths.AUDIO_FILES}")
         return
 
     recordings: list[Path] = [
-        PrjPaths.audio_files / pathAudioFile
-        for pathAudioFile in os.listdir(PrjPaths.audio_files)
+        PrjPaths.AUDIO_FILES / pathAudioFile
+        for pathAudioFile in os.listdir(PrjPaths.AUDIO_FILES)
         if not pathAudioFile.startswith(".")
     ]
 
     if not recordings:
-        DLOG.warning(f"No audio files found in directory: {PrjPaths.audio_files}")
+        DLOG.warning(f"No audio files found in directory: {PrjPaths.AUDIO_FILES}")
         return
 
     DLOG.info(
-        f"Found {len(recordings)} recording(s) to transcribe in {PrjPaths.audio_files}"
+        f"Found {len(recordings)} recording(s) to transcribe in {PrjPaths.AUDIO_FILES}"
     )
     for r in recordings:
         DLOG.info(f"  - {r.name}")
@@ -113,7 +115,7 @@ def main() -> None:
                 qualifier = recording.name.split(".")[0]
                 write_to_file(
                     chunk_result["transcript"],
-                    PrjPaths.transcripts_raw,
+                    PrjPaths.TRANSCRIPTS_RAW,
                     qualifier=qualifier,
                     overwrite=False
                 )

@@ -1,24 +1,33 @@
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+@dataclass(frozen=True)
+class PrjEnv:
+    GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+    FIREFLIES_TRANSCRIPTION_API_KEY: str | None = os.getenv("FIREFLIES_API_KEY")
 
 @dataclass(frozen=True)
 class PrjPaths:
-    chunks: Path = Path("./input-output/chunks")
-    transcripts_raw: Path = Path("./input-output/transcripts")
-    transcripts_cleaned: Path = Path("./input-output/outputs")
-    audio_files: Path = Path("./input-output/audio files")
-    logs: Path = Path('./logs')
-    tmp: Path = Path('./tmp')
-    tmp_audio_chunks = Path('./tmp/audio_chunks')
+    CHUNKS: Path = Path("./input-output/chunks")
+    TRANSCRIPTS_RAW: Path = Path("./input-output/transcripts")
+    TRANSCRIPTS_CLEANED: Path = Path("./input-output/outputs")
+    AUDIO_FILES: Path = Path("./input-output/audio files")
+    LOGS: Path = Path('./logs')
+    TMP: Path = Path('./tmp')
+    TMP_AUDIO_CHUNKS = Path('./tmp/audio_chunks')
 
 class PrjModels:
-    transcription: str = "medium.en"
-    clean_transcript: str = "gemini-3.1-flash-lite"
+    TRANSCRIPTION: str = "medium.en"
+    CLEAN_TRANSCRIPT: str = "gemini-3.1-flash-lite"
 
 @dataclass(frozen=True)
 class Prompts:
-    clean_transcript: str = """
+    CLEAN_TRANSCRIPT: str = """
 You are editing ONE CHUNK of the transcript.
 
 ## Goal

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import time
 from typing import Any
 
-from dotenv import load_dotenv
 from google import genai
 from google.genai._gaos.types.interactions import Interaction
 from google.genai._gaos.utils.eventstreaming import AsyncStream
@@ -13,19 +11,16 @@ from google.genai._gaos.utils.eventstreaming import AsyncStream
 from helpers import DLOG, write_to_file
 from settings import *
 
-load_dotenv()
-
-API_KEY: str | None = os.getenv("API_KEY")
 CLIENT: genai.Client | None = None
 
 
 def setup_client() -> genai.Client:
     DLOG.info("Setting up Gemini API client...")
-    if not API_KEY:
+    if not PrjEnv.GEMINI_API_KEY:
         DLOG.error("Missing API_KEY in environment variables.")
         raise ValueError("Missing API_KEY in environment.")
 
-    return genai.Client(api_key=API_KEY)
+    return genai.Client(api_key=PrjEnv.GEMINI_API_KEY)
 
 
 def get_chunk_files(pathChunks: Path) -> list[Path]:
@@ -125,19 +120,19 @@ async def main() -> None:
 
     try:
         CLIENT = setup_client()
-        chunkFiles = get_chunk_files(PrjPaths.chunks)
+        chunkFiles = get_chunk_files(PrjPaths.CHUNKS)
 
         chunk_names = [filePath.name for filePath in chunkFiles]
         DLOG.info(
             f"Client initialized successfully. "
             f"Chunks to process ({len(chunkFiles)}): {chunk_names}\n"
-            f"PROMPT:\n===start===\n{Prompts.clean_transcript}\n===end===\n"
+            f"PROMPT:\n===start===\n{Prompts.CLEAN_TRANSCRIPT}\n===end===\n"
         )
     except Exception as e:
         DLOG.exception(f"Startup validation failed: {e}")
         return
 
-    DLOG.info(f"Prompting model '{PrjModels.clean_transcript}' for {len(chunkFiles)} chunk(s)...")
+    DLOG.info(f"Prompting model '{PrjModels.CLEAN_TRANSCRIPT}' for {len(chunkFiles)} chunk(s)...")
 
     tasks = []
     for count, chunkPath in enumerate(chunkFiles):
@@ -145,8 +140,8 @@ async def main() -> None:
             chunkText = read_chunk_file(chunkPath)
             tasks.append(
                 prompt_model(
-                    Prompts.clean_transcript + chunkText,
-                    PrjModels.clean_transcript,
+                    Prompts.CLEAN_TRANSCRIPT + chunkText,
+                    PrjModels.CLEAN_TRANSCRIPT,
                     count,
                 )
             )
@@ -175,7 +170,7 @@ async def main() -> None:
                 asyncio.to_thread(
                     write_to_file,
                     output_text,
-                    PrjPaths.transcripts_cleaned,
+                    PrjPaths.TRANSCRIPTS_CLEANED,
                     idx,
                 )
             )

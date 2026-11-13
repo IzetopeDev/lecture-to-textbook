@@ -26,7 +26,7 @@ def test_dlog_init_on_import_helpers():
     assert len(stream_handlers) >= 1
 
     fileHandler = file_handlers[0]
-    assert Path(fileHandler.baseFilename).resolve() == (PrjPaths.logs / Path("debug.log")).resolve()
+    assert Path(fileHandler.baseFilename).resolve() == (PrjPaths.LOGS / Path("debug.log")).resolve()
     assert fileHandler.formatter is not None
     assert fileHandler.formatter._fmt == "%(asctime)s | %(levelname)s | %(message)s"
     assert fileHandler.encoding == "utf-8"
@@ -57,7 +57,7 @@ def test_dlog_levels(capsys: CaptureFixture[str]):
 
         # Allow time for writing to file
         time.sleep(0.05)
-        debug_log_path = PrjPaths.logs / Path("debug.log")
+        debug_log_path = PrjPaths.LOGS / Path("debug.log")
         assert debug_log_path.exists()
         with open(debug_log_path, "r", encoding="utf-8") as f:
             logContent = f.read()

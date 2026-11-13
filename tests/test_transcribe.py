@@ -22,18 +22,18 @@ def test_batch_transcribe_2_files():
 
     # 2. Get the list of input audio files
     audio_files = [
-        f for f in os.listdir(PrjPaths.audio_files) if not f.startswith(".")
+        f for f in os.listdir(PrjPaths.AUDIO_FILES) if not f.startswith(".")
     ]
-    assert len(audio_files) > 0, f"No audio files found in {PrjPaths.audio_files}"
+    assert len(audio_files) > 0, f"No audio files found in {PrjPaths.AUDIO_FILES}"
 
     # 3. Verify that a transcript output file exists and is non-empty for each audio file
     for audio_file in audio_files:
         qualifier = audio_file.split(".")[0]
-        expected_transcript = PrjPaths.transcripts_raw / f"output-{qualifier}.txt"
+        expected_transcript = PrjPaths.TRANSCRIPTS_RAW / f"output-{qualifier}.txt"
 
         assert expected_transcript.exists(), (
             f"Expected transcript file '{expected_transcript.name}' "
-            f"was not created in {PrjPaths.transcripts_raw}"
+            f"was not created in {PrjPaths.TRANSCRIPTS_RAW}"
         )
         assert expected_transcript.stat().st_size > 0, (
             f"Transcript file '{expected_transcript.name}' is empty"

@@ -37,11 +37,11 @@ class _ConsoleStreamHandler(logging.StreamHandler):
         pass
 
 
-PrjPaths.logs.mkdir(parents=True, exist_ok=True)
+PrjPaths.LOGS.mkdir(parents=True, exist_ok=True)
 
 if not DLOG.handlers:
     # TODO(once stable): change "a" to "w" to prevent over-accumulation of logs.
-    _fileHandler = logging.FileHandler((PrjPaths.logs / Path("debug.log")), "a", "utf-8", errors="backslashreplace")
+    _fileHandler = logging.FileHandler((PrjPaths.LOGS / Path("debug.log")), "a", "utf-8", errors="backslashreplace")
     _fileHandler.setFormatter(_formatter)
     _fileHandler.setLevel(_log_level)
 
@@ -75,7 +75,7 @@ def split_audio(
 
     # start logging and create tmp path
     DLOG.info(f"Splitting audio file: {pathAudioFile} (chunk length: {chunkLength} min)")
-    PrjPaths.tmp_audio_chunks.mkdir(parents=True, exist_ok=True)
+    PrjPaths.TMP_AUDIO_CHUNKS.mkdir(parents=True, exist_ok=True)
 
     if not pathAudioFile.exists():
         DLOG.error(f"Audio file not found: {pathAudioFile}")
@@ -105,7 +105,7 @@ def split_audio(
         DLOG.info(f"Splitting into {total_chunks} chunk(s)...")
 
         for i, start in enumerate(ranges):
-            outputFile = PrjPaths.tmp_audio_chunks / f"chunk{i}.{ext}"
+            outputFile = PrjPaths.TMP_AUDIO_CHUNKS / f"chunk{i}.{ext}"
             (
                 ffmpeg
                 .input(str(pathAudioFile), ss=start, t=chunkLength*u)
