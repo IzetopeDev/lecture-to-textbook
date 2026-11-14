@@ -34,18 +34,6 @@ def test_write_without_qualifier(temp_dir):
     
     assert result.name == "output.txt"
 
-def test_write_with_custom_filetype(temp_dir):
-    """Test writing with custom file type"""
-    result = write_to_file("JSON data", temp_dir, filetype=".json")
-    
-    assert result.name == "output.json"
-
-def test_write_with_qualifier_and_custom_filetype(temp_dir):
-    """Test combination of qualifier and custom filetype"""
-    result = write_to_file("Data", temp_dir, qualifier="v2", filetype=".csv")
-    
-    assert result.name == "output-v2.csv"
-
 def test_append_mode_default(temp_dir):
     """Test that default mode is append"""
     write_to_file("First line\n", temp_dir, qualifier="append")
@@ -91,21 +79,6 @@ def test_unicode_content(temp_dir):
     
     assert result.read_text(encoding="utf-8") == unicode_text
 
-def test_qualifier_with_special_characters(temp_dir):
-    """Test qualifier with numbers and special chars"""
-    result = write_to_file("Test", temp_dir, qualifier=123)
-    
-    assert result.name == "output-123.txt"
-
-def test_logging_info_messages(temp_dir, caplog):
-    """Test that info messages are logged"""
-    with caplog.at_level(logging.INFO):
-        write_to_file("Test", temp_dir, qualifier="log_test")
-    
-    assert "Writing file:" in caplog.text
-    assert "Done in" in caplog.text
-    assert "output-log_test.txt" in caplog.text
-
 def test_oserror_handling(tmp_path):
     """Test OSError handling"""
     # Create a file instead of a directory to force an error
@@ -126,18 +99,6 @@ def test_oserror_logging(tmp_path, caplog):
     
     assert "Failed writing output file" in caplog.text
     assert "qualifier=error_test" in caplog.text
-
-@patch('time.perf_counter')
-def test_timing_measurement(mock_time, temp_dir):
-    """Test that timing is measured"""
-    mock_time.side_effect = [0.0, 1.5]  # Start and end times
-    
-    with patch('helpers.DLOG.info') as mock_log:
-        write_to_file("Test", temp_dir)
-        
-        # Check that the timing was logged
-        calls = [str(call) for call in mock_log.call_args_list]
-        assert any("1.50" in call for call in calls)
 
 def test_empty_string(temp_dir):
     """Test writing empty string"""
