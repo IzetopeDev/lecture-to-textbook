@@ -61,7 +61,7 @@ def clear_tmp(
     if not dir.is_relative_to(PrjPaths.TMP):
         DLOG.warning(f"Unable to clear tmp folder. Invalid path passed: {dir!s}. Operation Skipped")
         return
-        
+
     DLOG.info(f"clearing {dir}")
 
     count = 0
@@ -72,11 +72,12 @@ def clear_tmp(
             count += 1
 
     DLOG.info(f"Total files cleared: {count}")
-    
+
 
 def split_audio(
-    pathAudioFile: Path,
-    chunkLength: int = 20
+    path_audio_file: Path,
+    chunk_length: int = 20,
+    path_output: Path = PrjPaths.TMP_AUDIO_CHUNKS,
 ) -> list[Path]:
     """
     Split an audio file into chunks of a specified length.
@@ -92,22 +93,20 @@ def split_audio(
         Exception: if any other exception occurs
     """
 
-    # start logging and create tmp path
-    DLOG.info(f"Splitting audio file: {pathAudioFile} (chunk length: {chunkLength} min)")
-    PrjPaths.TMP_AUDIO_CHUNKS.mkdir(parents=True, exist_ok=True)
+    DLOG.info(f"Splitting audio file: {path_audio_file} (chunk length: {chunk_length} min)")
+    path_output.mkdir(parents=True, exist_ok=True)
 
-    if not pathAudioFile.exists():
-        DLOG.error(f"Audio file not found: {pathAudioFile}")
-        raise FileNotFoundError(f"Audio file not found: {pathAudioFile}")
+    if not path_audio_file.exists():
+        DLOG.error(f"Audio file not found: {path_audio_file}")
+        raise FileNotFoundError()
 
-    # get duration and ext of audio file
     try:
-        probe = ffmpeg.probe(pathAudioFile)
-    except ffmpeg.Error as e:
-        DLOG.error(f"FFmpeg probe failed for {pathAudioFile}: {e}")
+        probe = ffmpeg.probe(path_audio_file)
+    except ffmpeg.Error:
+        DLOG.exception(f"FFmpeg probe passed an error for {path_audio_file}")
         raise
-    except Exception as e:
-        DLOG.error(f"Uncaught exception during FFmpeg probe for {pathAudioFile}: {e}")
+    except Exception:
+        DLOG.exception(f"Uncaught exception during FFmpeg probe for {path_audio_file}")
         raise
 
     duration = float(probe['format']['duration'])
@@ -115,19 +114,19 @@ def split_audio(
 
     DLOG.info(f"Audio file probed: duration={duration:.2f}s, format/codec={ext}")
 
-    u = 60
-
     try:
         chunks = []
-        ranges = list(range(0, math.ceil(duration), int(chunkLength * u)))
+        ranges = list(range(0, math.ceil(duration), int(chunk_length * 60))) #NOTE: hardcoded conversion to minutes!
         total_chunks = len(ranges)
         DLOG.info(f"Splitting into {total_chunks} chunk(s)...")
+
+        clear_tmp(PrjPaths.TMP_AUDIO_CHUNKS)
 
         for i, start in enumerate(ranges):
             outputFile = PrjPaths.TMP_AUDIO_CHUNKS / f"chunk{i}.{ext}"
             (
                 ffmpeg
-                .input(str(pathAudioFile), ss=start, t=chunkLength*u)
+                .input(str(path_audio_file), ss=start, t=chunk_length * 60) #NOTE: hardcoded conversion to minutes!
                 .output(str(outputFile))
                 .overwrite_output()
                 .run(quiet=True)
@@ -135,14 +134,13 @@ def split_audio(
             DLOG.info(f"Created audio chunk [{i+1}/{total_chunks}]: {outputFile}")
             chunks.append(outputFile)
 
-        DLOG.info(f"Successfully split audio file '{pathAudioFile.name}' into {len(chunks)} chunk(s)")
-    except Exception as e:
-        DLOG.error(f"Exception raised while splitting audio: {e}", exc_info=True)
+        DLOG.info(f"Successfully split audio file '{path_audio_file.name}' into {len(chunks)} chunk(s)")
+    except Exception:
+        DLOG.exception("Exception raised while splitting audio")
         raise
 
     return chunks
-
-
+    
 
 def write_to_file(
     text: str,
