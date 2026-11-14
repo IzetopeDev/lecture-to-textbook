@@ -55,6 +55,25 @@ if not DLOG.handlers:
 DLOG.setLevel(_log_level)
 
 
+def clear_tmp(
+    dir: Path = PrjPaths.TMP
+) -> None:
+    if not dir.is_relative_to(PrjPaths.TMP):
+        DLOG.warning(f"Unable to clear tmp folder. Invalid path passed: {dir!s}. Operation Skipped")
+        return
+        
+    DLOG.info(f"clearing {dir}")
+
+    count = 0
+    for child in dir.iterdir():
+        if child.is_file() or child.is_symlink():
+            child.unlink()
+            DLOG.debug(f"Cleared {child}")
+            count += 1
+
+    DLOG.info(f"Total files cleared: {count}")
+    
+
 def split_audio(
     pathAudioFile: Path,
     chunkLength: int = 20
