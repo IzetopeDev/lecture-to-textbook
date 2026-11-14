@@ -9,30 +9,50 @@ from helpers import DLOG, split_audio, write_to_file
 from settings import PrjModels, PrjPaths
 
 
-def _load_model() -> whisper.model.Whisper:
+def _load_whisper(
+     model_name: str = PrjModels.TRANSCRIPTION,
+     device: str = "cuda"
+) -> whisper.model.Whisper:
     startTime = time.perf_counter()
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    valid_models = whisper.available_models()
+    if model_name not in valid_models:
+        msg = f"Invalid model '{model_name}'. Available models are: {valid_models}"
+        DLOG.error(msg)
+        raise ValueError(msg)
+
+    valid_devices = ["cuda", "cpu"]
+    if device not in valid_devices:
+        msg = f"Invalid device '{device}'. Valid devices are: {valid_devices}"
+        DLOG.error(msg)
+        raise ValueError(msg)
+
+    if not torch.cuda.is_available():
+       device = "cpu"
+       DLOG.warning("GPU not found! Loading on CPU!")
+
     DLOG.info(
-        f"Loading Whisper model '{PrjModels.TRANSCRIPTION}' on device '{device}'..."
+        f"Loading Whisper model '{model_name}' on device '{device}'..."
     )
-    if device == "cpu":
-        DLOG.warning("Loading on CPU!")
 
     try:
-        model = whisper.load_model(PrjModels.TRANSCRIPTION, device=device)
-    except Exception as e:
+        model = whisper.load_model(model_name, device=device)
+    except Exception:
         if device == "cuda":
             DLOG.warning(
-                f"Failed to load model on CUDA ({e}). Falling back to CPU..."
+                "Failed to load model on CUDA. Falling back to CPU...",
+                exc_info=True
             )
             device = "cpu"
-            model = whisper.load_model(PrjModels.TRANSCRIPTION, device=device)
+            model = whisper.load_model(model_name, device=device)
+            
         else:
-            raise
+            DLOG.exception("Failed to load model!")
+            raise 
 
     elapsed = time.perf_counter() - startTime
     DLOG.info(f"Model loaded in {elapsed:.2f}s on {device}")
-    
+
     return model
 
 
