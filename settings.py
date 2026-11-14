@@ -19,6 +19,7 @@ class PrjPaths:
     LOGS: Path = Path('./logs')
     TMP: Path = Path('./tmp')
     TMP_AUDIO_CHUNKS = Path('./tmp/audio_chunks')
+    TMP_TRANSCRIPT_CHUNKS = Path('./tmp/transcript_chunks')
 
 class PrjModels:
     TRANSCRIPTION: str = "medium.en"
@@ -26,6 +27,7 @@ class PrjModels:
 
 @dataclass(frozen=True)
 class Prompts:
+    WHISPER_INITIAL_PROMPT: str = "Please transcribe the audio accurately, omitting filler words such as um, uh, like, you know, and ah."
     CLEAN_TRANSCRIPT: str = """
 You are editing ONE CHUNK of the transcript.
 
