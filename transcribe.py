@@ -9,7 +9,7 @@ from helpers import DLOG, split_audio, write_to_file
 from settings import PrjModels, PrjPaths
 
 
-def load_model() -> whisper.model.Whisper:
+def _load_model() -> whisper.model.Whisper:
     startTime = time.perf_counter()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     DLOG.info(
@@ -32,10 +32,11 @@ def load_model() -> whisper.model.Whisper:
 
     elapsed = time.perf_counter() - startTime
     DLOG.info(f"Model loaded in {elapsed:.2f}s on {device}")
+    
     return model
 
 
-def transcribe(
+def _transcribe(
     model: whisper.model.Whisper,
     pathRecording: Path,
 ) -> dict:
@@ -62,36 +63,35 @@ def transcribe(
         }
 
     except Exception as e:
-        DLOG.error(f"Failed to transcribe {audio_path}: {e}", exc_info=True)
+        DLOG.exception(f"Failed to transcribe {audio_path}")
         raise
 
 
 def main() -> None:
-    DLOG.info("=" * 60)
-    DLOG.info("Starting audio transcription workflow")
+    DLOG.info("Starting audio transcription workflow...")
 
     if not PrjPaths.AUDIO_FILES.exists():
-        DLOG.warning(f"Audio files directory does not exist: {PrjPaths.AUDIO_FILES}")
-        return
+        DLOG.error(f"Audio files directory does not exist: {PrjPaths.AUDIO_FILES}")
+        raise FileNotFoundError()
 
     recordings: list[Path] = [
-        PrjPaths.AUDIO_FILES / pathAudioFile
-        for pathAudioFile in os.listdir(PrjPaths.AUDIO_FILES)
-        if not pathAudioFile.startswith(".")
+        PrjPaths.AUDIO_FILES / audioFileName
+        for audioFileName in os.listdir(PrjPaths.AUDIO_FILES)
+        if not audioFileName.startswith(".")
     ]
 
     if not recordings:
-        DLOG.warning(f"No audio files found in directory: {PrjPaths.AUDIO_FILES}")
-        return
+        DLOG.error(f"No audio files found in directory: {PrjPaths.AUDIO_FILES}")
+        raise FileNotFoundError()
 
     DLOG.info(
-        f"Found {len(recordings)} recording(s) to transcribe in {PrjPaths.AUDIO_FILES}"
+        f"Found {len(recordings)} recording(s) to transcribe in {PrjPaths.AUDIO_FILES}:"
     )
     for r in recordings:
         DLOG.info(f"  - {r.name}")
 
     # Load model once
-    model = load_model()
+    model = _load_model()
 
     # Process each recording sequentially
     for idx, recording in enumerate(recordings, 1):
@@ -111,7 +111,7 @@ def main() -> None:
         for chunk_idx, chunk in enumerate(recChunks, 1):
             DLOG.info(f"[WORKFLOW] Transcribing chunk [{chunk_idx}/{len(recChunks)}]: {chunk.name}")
             try:
-                chunk_result = transcribe(model, chunk)
+                chunk_result = _transcribe(model, chunk)
                 qualifier = recording.name.split(".")[0]
                 write_to_file(
                     chunk_result["transcript"],
