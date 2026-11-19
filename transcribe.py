@@ -35,7 +35,7 @@ def _load_whisper(
      device: str = "cuda"
 ) -> whisper.model.Whisper:
     startTime = time.perf_counter()
-    
+
     if not torch.cuda.is_available():
        device = "cpu"
        DLOG.warning("GPU not found! Loading on CPU!")
@@ -64,7 +64,7 @@ def _load_whisper(
             raise
     except Exception:
         DLOG.exception(f"Unexpected error loading Whisper model '{model_name}'!")
-        raise 
+        raise
 
     elapsed = time.perf_counter() - startTime
     DLOG.info(f"Model loaded in {elapsed:.2f}s on {device}")
@@ -80,6 +80,12 @@ def transcribe(
 
     startTime = time.perf_counter()
 
+    #DLOG.debug(
+    #    f"transcribe called with model={model!r}, "
+    #    f"path_audio_file={path_audio_file!r}, "
+    #    f"path_ouput={path_ouput!r}"
+    #)
+
     if not path_audio_file.is_file():
         DLOG.error(f"Audio file does not exist: {path_audio_file}")
         raise FileNotFoundError(f"Audio file not found: {path_audio_file}")
@@ -91,7 +97,7 @@ def transcribe(
     try:
         try:
             result = _model.transcribe(
-                str(path_audio_file), 
+                str(path_audio_file),
                 verbose=False,
                 initial_prompt=Prompts.WHISPER_INITIAL_PROMPT,
             )
@@ -142,15 +148,15 @@ def transcribe(
 
     return {
         "result": result,
-        "output_file": output_file 
+        "output_file": output_file
     }
-    
-        
+
+
 
 
 def batch_transcribe(
     input_folder: Path = PrjPaths.AUDIO_FILES,
-    output_folder: Path | None = None,  
+    output_folder: Path | None = None,
 ) -> None:
     DLOG.info("Starting audio transcription workflow...")
 
@@ -182,8 +188,8 @@ def batch_transcribe(
     for idx, recording in enumerate(recordings, 1):
         DLOG.info(f"Processing recording [{idx}/{len(recordings)}]: {recording.name}")
         try:
-            transcribe(model, (input_folder / recording), output_folder)
-            
+            transcribe(model, recording, output_folder)
+
         except FileNotFoundError as e:
             if "ffmpeg" in str(e).lower():
                 DLOG.critical(f"FFmpeg not found in system PATH. Aborting batch: {e}")

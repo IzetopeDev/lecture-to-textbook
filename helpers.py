@@ -47,7 +47,7 @@ if not DLOG.handlers:
 
     _streamHandler = _ConsoleStreamHandler()
     _streamHandler.setFormatter(_formatter)
-    _streamHandler.setLevel(_log_level)
+    _streamHandler.setLevel(logging.INFO) # NOTE: Decided that console logs should be more minimal, and should not like clog up the logs...
 
     DLOG.addHandler(_fileHandler)
     DLOG.addHandler(_streamHandler)
